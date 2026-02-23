@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Run Territory Nagpur</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+        }
+
+        header {
+            padding: 15px;
+            text-align: center;
+            background: #1e293b;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        #map {
+            height: 60vh;
+        }
+
+        .panel {
+            padding: 15px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: #22c55e;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #16a34a;
+        }
+
+        .leaderboard {
+            margin-top: 15px;
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .leaderboard div {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    Run Territory – Nagpur
+</header>
+
+<div id="map"></div>
+
+<div class="panel">
+    <button onclick="startRun()">Start Run</button>
+    <button onclick="stopRun()">Stop Run</button>
+    <button onclick="claimTerritory()">Simulate Claim</button>
+
+    <div class="leaderboard">
+        <h3>Leaderboard</h3>
+        <div id="leaders"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    const map = L.map('map').setView([21.1458, 79.0882], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let watchId;
+    let route = [];
+
+    const users = {
+        "Shree": 0,
+        "RunnerA": 0,
+        "RunnerB": 0
+    };
+
+    function updateLeaderboard() {
+        const sorted = Object.entries(users)
+            .sort((a, b) => b[1] - a[1]);
+
+        const leadersDiv = document.getElementById("leaders");
+        leadersDiv.innerHTML = "";
+
+        sorted.forEach(user => {
+            leadersDiv.innerHTML +=
+                "<div>" + user[0] + ": " + user[1] + " territories</div>";
+        });
+    }
+
+    function startRun() {
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+                position => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    route.push([lat, lng]);
+
+                    L.marker([lat, lng]).addTo(map);
+                    map.setView([lat, lng], 15);
+                },
+                error => {
+                    alert("GPS error: " + error.message);
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                }
+            );
+        } else {
+            alert("Geolocation not supported.");
+        }
+    }
+
+    function stopRun() {
+        navigator.geolocation.clearWatch(watchId);
+        alert("Run stopped!");
+        console.log("Route:", route);
+    }
+
+    function randomUser() {
+        const keys = Object.keys(users);
+        return keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    function claimTerritory() {
+        const lat = 21.13 + Math.random() * 0.05;
+        const lng = 79.05 + Math.random() * 0.08;
+
+        const owner = randomUser();
+        users[owner] += 1;
+
+        const color = owner === "Shree" ? "green" :
+                      owner === "RunnerA" ? "blue" : "red";
+
+        const square = L.rectangle([
+            [lat, lng],
+            [lat + 0.005, lng + 0.005]
+        ], {
+            color: color,
+            weight: 1,
+            fillOpacity: 0.5
+        }).addTo(map);
+
+        square.bindPopup(owner + " owns this territory!");
+
+        updateLeaderboard();
+    }
+
+    updateLeaderboard();
+</script>
+
+</body>
+</html>
